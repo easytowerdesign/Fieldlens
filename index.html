@@ -6,795 +6,1127 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Field Lens">
-<title>Field Lens — Inspection Reports</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#007acc">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Field Lens</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<style>
-  :root {
-    --bg: #0e1117;
-    --surface: #161b24;
-    --border: rgba(255,255,255,0.06);
-    --text: #e4e8ef;
-    --text-dim: #667;
-    --text-mid: #8892a4;
-    --accent: #007acc;
-    --accent-dark: #005fa3;
-    --danger: #a33;
-    --success: #1a7a3a;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  body {
-    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    min-height: -webkit-fill-available;
-    overflow-x: hidden;
-  }
-  .app {
-    max-width: 480px;
-    margin: 0 auto;
-    min-height: 100vh;
-    min-height: -webkit-fill-available;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Header */
-  .header {
-    padding: 16px 20px 10px;
-    padding-top: max(16px, env(safe-area-inset-top));
-    background: linear-gradient(180deg, #141820 0%, var(--bg) 100%);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .logo {
-    font-family: 'Instrument Serif', Georgia, serif;
-    font-size: 28px;
-    font-weight: 400;
-    letter-spacing: -0.02em;
-    color: #fff;
-  }
-  .logo em { color: var(--accent); font-style: italic; }
-  .subtitle {
-    font-size: 11px;
-    color: var(--text-dim);
-    margin-top: 2px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    font-weight: 500;
-  }
-
-  /* Tabs */
-  .tabs {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    background: var(--bg);
-    position: sticky;
-    top: 0;
-    z-index: 20;
-  }
-  .tab {
-    flex: 1;
-    padding: 12px 0;
-    text-align: center;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-dim);
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.03em;
-    font-family: inherit;
-  }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .tab .badge {
-    background: rgba(0,122,204,0.2);
-    color: var(--accent);
-    font-size: 11px;
-    font-weight: 700;
-    padding: 2px 7px;
-    border-radius: 20px;
-    margin-left: 4px;
-  }
-
-  /* Content */
-  .content {
-    padding: 16px 20px 120px;
-    flex: 1;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
-
-  /* Capture zone */
-  .capture-zone {
-    border: 2px dashed rgba(0,122,204,0.3);
-    border-radius: 16px;
-    padding: 48px 24px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s;
-    background: rgba(0,122,204,0.04);
-    margin-bottom: 20px;
-  }
-  .capture-zone:active {
-    border-color: rgba(0,122,204,0.6);
-    background: rgba(0,122,204,0.08);
-  }
-  .capture-btn {
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-    border: 3px solid rgba(255,255,255,0.15);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 16px;
-    cursor: pointer;
-    box-shadow: 0 4px 24px rgba(0,122,204,0.35);
-    transition: transform 0.15s;
-  }
-  .capture-btn:active { transform: scale(0.95); }
-  .capture-btn svg { width: 28px; height: 28px; }
-  .capture-label { font-size: 16px; font-weight: 600; color: #c0c6d0; }
-  .capture-sub { font-size: 13px; color: var(--text-dim); margin-top: 6px; }
-
-  /* Thumbnail strip */
-  .thumb-strip-wrap {
-    background: var(--surface);
-    border-radius: 12px;
-    padding: 16px;
-    border: 1px solid var(--border);
-  }
-  .thumb-strip-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-    font-size: 13px;
-  }
-  .thumb-strip-header span:first-child { font-weight: 600; color: var(--text-mid); }
-  .thumb-strip-header span:last-child { color: var(--text-dim); font-size: 12px; }
-  .thumb-strip {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    -webkit-overflow-scrolling: touch;
-  }
-  .thumb-strip::-webkit-scrollbar { display: none; }
-  .thumb { position: relative; flex-shrink: 0; }
-  .thumb img {
-    width: 64px; height: 64px;
-    object-fit: cover;
-    border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.08);
-  }
-  .thumb-num {
-    position: absolute; bottom: -4px; right: -4px;
-    background: var(--accent); color: #fff;
-    font-size: 9px; font-weight: 700;
-    width: 18px; height: 18px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-  }
-
-  /* Photo cards */
-  .photo-card {
-    background: var(--surface);
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 16px;
-    border: 1px solid var(--border);
-    animation: slideUp 0.3s ease;
-  }
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .photo-card img.photo-img {
-    width: 100%; height: 220px;
-    object-fit: cover; display: block;
-  }
-  .photo-tag {
-    position: absolute; top: 10px; left: 10px;
-    background: rgba(0,0,0,0.65);
-    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-    padding: 4px 10px; border-radius: 6px;
-    font-size: 11px; font-weight: 700; color: #fff;
-  }
-  .photo-meta { padding: 12px 14px; }
-  .photo-actions {
-    display: flex; gap: 6px;
-    padding: 8px 14px 12px;
-    justify-content: flex-end;
-    align-items: center;
-  }
-
-  /* Caption */
-  .caption-display {
-    font-size: 14px; color: #c0c6d0; line-height: 1.5;
-    cursor: pointer; padding: 8px 10px; border-radius: 8px;
-    display: flex; align-items: flex-start; gap: 8px;
-    transition: background 0.15s;
-  }
-  .caption-display:active { background: rgba(255,255,255,0.04); }
-  .caption-placeholder { color: var(--text-dim); font-style: italic; }
-  .timestamp { font-size: 11px; color: #445; margin-top: 6px; }
-
-  /* Form elements */
-  .label {
-    font-size: 11px; font-weight: 700; color: var(--text-dim);
-    text-transform: uppercase; letter-spacing: 0.08em;
-    margin-bottom: 6px; display: block;
-  }
-  .input, .textarea {
-    width: 100%;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 10px;
-    padding: 12px 14px;
-    color: var(--text);
-    font-size: 14px;
-    font-family: 'DM Sans', sans-serif;
-    outline: none;
-    margin-bottom: 12px;
-  }
-  .textarea { resize: vertical; min-height: 60px; border-radius: 8px; padding: 10px 12px; }
-  .input:focus, .textarea:focus { border-color: rgba(0,122,204,0.5); }
-
-  /* Buttons */
-  .icon-btn {
-    background: none; border: none;
-    color: var(--text-dim); cursor: pointer;
-    padding: 6px; border-radius: 6px;
-    display: flex; align-items: center;
-    transition: background 0.15s;
-  }
-  .icon-btn:active { background: rgba(255,255,255,0.06); }
-  .icon-btn.danger { color: var(--danger); }
-
-  .btn-primary {
-    display: inline-block;
-    padding: 8px 16px;
-    border-radius: 8px; border: none;
-    background: var(--accent); color: #fff;
-    font-size: 13px; font-weight: 600;
-    cursor: pointer; font-family: inherit;
-    margin-top: 8px;
-  }
-  .btn-primary:active { opacity: 0.85; }
-
-  .generate-btn {
-    width: 100%; padding: 16px;
-    border-radius: 12px; border: none;
-    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-    color: #fff; font-size: 15px; font-weight: 700;
-    font-family: inherit; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    gap: 10px; margin-top: 20px;
-    box-shadow: 0 4px 20px rgba(0,122,204,0.3);
-    transition: all 0.2s; letter-spacing: 0.03em;
-  }
-  .generate-btn:active { transform: scale(0.98); }
-  .generate-btn.disabled {
-    background: rgba(255,255,255,0.06);
-    color: #445; box-shadow: none; cursor: default;
-  }
-
-  /* Summary box */
-  .summary-box {
-    background: var(--surface);
-    border-radius: 12px; padding: 16px;
-    margin-top: 16px; border: 1px solid var(--border);
-  }
-  .summary-title { font-size: 13px; color: var(--text-mid); margin-bottom: 8px; }
-  .summary-row {
-    display: flex; justify-content: space-between;
-    margin-bottom: 2px; font-size: 13px;
-  }
-  .summary-row .lbl { color: var(--text-dim); }
-  .summary-row .val { color: var(--text); font-weight: 600; }
-
-  /* Empty state */
-  .empty-state {
-    text-align: center; padding: 40px 20px; color: #445;
-  }
-  .empty-state svg { opacity: 0.5; }
-  .empty-title { margin-top: 12px; font-size: 15px; font-weight: 500; }
-  .empty-sub { margin-top: 4px; font-size: 13px; }
-
-  /* FAB */
-  .fab {
-    position: fixed; bottom: 24px; right: 24px;
-    width: 56px; height: 56px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-    box-shadow: 0 4px 20px rgba(0,122,204,0.4);
-    display: flex; align-items: center; justify-content: center;
-    color: #fff; cursor: pointer; z-index: 50;
-    border: none; transition: transform 0.15s;
-  }
-  .fab:active { transform: scale(0.92); }
-  .fab svg { width: 24px; height: 24px; }
-
-  /* Toast */
-  .toast {
-    position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
-    background: var(--success); color: #fff;
-    padding: 12px 24px; border-radius: 12px;
-    font-size: 14px; font-weight: 600;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-    z-index: 999; animation: fadeIn 0.3s ease;
-    white-space: nowrap;
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateX(-50%) translateY(10px); }
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
-  }
-
-  /* Section heading */
-  .section-heading { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-  .section-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; }
-
-  .spacer { flex: 1; }
-
-  /* iOS bottom safe area */
-  .bottom-safe { height: env(safe-area-inset-bottom, 0px); }
-</style>
 </head>
 <body>
 <div class="app" id="app">
-
-  <!-- Hidden file input -->
   <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
 
-  <!-- Header -->
-  <div class="header">
-    <div class="logo">Field <em>Lens</em></div>
-    <div class="subtitle">Inspection Photo Reports</div>
-  </div>
-
-  <!-- Tabs -->
-  <div class="tabs">
-    <button class="tab active" data-tab="capture">Capture</button>
-    <button class="tab" data-tab="gallery">Photos <span class="badge" id="photoBadge" style="display:none">0</span></button>
-    <button class="tab" data-tab="report">Report</button>
-  </div>
-
-  <!-- Content -->
-  <div class="content">
-
-    <!-- CAPTURE TAB -->
-    <div class="tab-panel active" id="panel-capture">
-      <div class="capture-zone" id="captureZone">
-        <div class="capture-btn" id="captureBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-            <circle cx="12" cy="13" r="4"/>
-          </svg>
-        </div>
-        <div class="capture-label">Tap to Take Photo</div>
-        <div class="capture-sub">or select from gallery</div>
+  <!-- REPORTS LIST VIEW -->
+  <div id="reportsView">
+    <div class="header">
+      <div class="header-left">
+        <div class="logo">Field <em>Lens</em></div>
+        <div class="subtitle">Inspection Photo Reports</div>
       </div>
-      <div id="thumbStripWrap" class="thumb-strip-wrap" style="display:none">
-        <div class="thumb-strip-header">
-          <span id="photoCount">0 photos captured</span>
-          <span id="pageCount">0 pages in report</span>
-        </div>
-        <div class="thumb-strip" id="thumbStrip"></div>
-      </div>
+      <button id="aboutBtn" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-mid);font-size:16px;font-weight:700;font-family:inherit">?</button>
     </div>
-
-    <!-- GALLERY TAB -->
-    <div class="tab-panel" id="panel-gallery">
-      <div class="empty-state" id="emptyGallery">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-        </svg>
-        <div class="empty-title">No photos yet</div>
-        <div class="empty-sub">Capture your first inspection photo</div>
+    <div id="installBanner" class="install-banner">
+      <div class="install-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7-7 7 7"/></svg></div>
+      <div class="install-text">
+        <div class="install-title">Install Field Lens</div>
+        <div class="install-sub">Tap <strong>Share</strong> then <strong>"Add to Home Screen"</strong></div>
       </div>
-      <div id="photoList"></div>
+      <button class="install-dismiss" id="dismissInstall">&times;</button>
     </div>
-
-    <!-- REPORT TAB -->
-    <div class="tab-panel" id="panel-report">
-      <div class="section-heading">Report Details</div>
-      <div class="section-sub">This info appears on the cover page of your PDF</div>
-
-      <label class="label">Project Name</label>
-      <input class="input" id="projectName" placeholder="e.g., 230kV Tower Line Inspection">
-
-      <label class="label">Location</label>
-      <input class="input" id="location" placeholder="e.g., Structure #45, MP 12.3">
-
-      <label class="label">Inspector Name</label>
-      <input class="input" id="inspector" placeholder="Your name">
-
-      <label class="label">Date</label>
-      <input class="input" id="reportDate" type="date">
-
-      <div class="summary-box">
-        <div class="summary-title">Report Summary</div>
-        <div class="summary-row"><span class="lbl">Photos</span><span class="val" id="sumPhotos">0</span></div>
-        <div class="summary-row"><span class="lbl">Pages (2 photos/page)</span><span class="val" id="sumPages">0</span></div>
-        <div class="summary-row"><span class="lbl">With captions</span><span class="val" id="sumCaptions">0 / 0</span></div>
-      </div>
-
-      <button class="generate-btn disabled" id="generateBtn" disabled>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-        </svg>
-        Generate PDF Report
+    <div class="content">
+      <button class="new-report-btn" id="newReportBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Inspection Report
       </button>
-      <div class="empty-sub" id="generateHint" style="text-align:center;margin-top:12px;">
-        Capture at least one photo to generate a report
+      <div id="reportsList"></div>
+      <div class="empty-state" id="emptyReports" style="display:none">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <div class="empty-title">No reports yet</div>
+        <div class="empty-sub">Create your first inspection report</div>
       </div>
     </div>
   </div>
 
-  <!-- FAB (gallery tab only) -->
-  <button class="fab" id="fab" style="display:none">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-      <circle cx="12" cy="13" r="4"/>
-    </svg>
-  </button>
+  <!-- SINGLE REPORT VIEW -->
+  <div id="reportView">
+    <div class="header">
+      <button class="header-btn" id="backBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Reports
+      </button>
+      <div style="text-align:right">
+        <div id="reportTitle" style="font-size:14px;font-weight:600;color:#fff;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:1px"><span class="saving-dot"></span>Auto-saved</div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="capture">Capture</button>
+      <button class="tab" data-tab="gallery">Photos <span class="badge" id="photoBadge" style="display:none">0</span></button>
+      <button class="tab" data-tab="report">Export</button>
+    </div>
+    <div class="content">
+      <div class="tab-panel active" id="panel-capture">
+        <div class="capture-zone" id="captureZone">
+          <div class="capture-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+          <div class="capture-label">Tap to Take Photo</div>
+          <div class="capture-sub">or select from gallery</div>
+        </div>
+        <div id="thumbStripWrap" class="thumb-strip-wrap" style="display:none">
+          <div class="thumb-strip-header"><span id="photoCount">0 photos</span><span id="pageCount">0 pages</span></div>
+          <div class="thumb-strip" id="thumbStrip"></div>
+        </div>
+      </div>
+      <div class="tab-panel" id="panel-gallery">
+        <div class="empty-state" id="emptyGallery">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <div class="empty-title">No photos yet</div>
+          <div class="empty-sub">Capture your first inspection photo</div>
+        </div>
+        <div id="photoList"></div>
+      </div>
+      <div class="tab-panel" id="panel-report">
+        <div class="section-heading">Report Details</div>
+        <div class="section-sub">Cover page info for your exported report</div>
+        <label class="label">Project Name</label>
+        <input class="input" id="projectName" placeholder="e.g., 230kV Tower Line Inspection">
+        <label class="label">Location</label>
+        <input class="input" id="location" placeholder="e.g., Structure #45, MP 12.3">
+        <label class="label">Inspector Name</label>
+        <input class="input" id="inspector" placeholder="Your name">
+        <label class="label">Date</label>
+        <input class="input" id="reportDate" type="date">
+        <div class="summary-box">
+          <div class="summary-title">Report Summary</div>
+          <div class="summary-row"><span class="lbl">Photos</span><span class="val" id="sumPhotos">0</span></div>
+          <div class="summary-row"><span class="lbl">Pages</span><span class="val" id="sumPages">0</span></div>
+          <div class="summary-row"><span class="lbl">With captions</span><span class="val" id="sumCaptions">0 / 0</span></div>
+        </div>
+        <div style="margin-top:20px">
+          <label class="label">Export Format</label>
+          <div class="format-toggle">
+            <button class="format-opt active" data-fmt="pdf">PDF</button>
+            <button class="format-opt" data-fmt="docx">Word (.docx)</button>
+          </div>
+        </div>
+        <button class="generate-btn disabled" id="previewBtn" disabled style="margin-top:16px;background:var(--surface2);border:1px solid var(--border);box-shadow:none">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span>Preview PDF</span>
+        </button>
+        <button class="generate-btn disabled" id="generateBtn" disabled>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span id="generateLabel">Export PDF Report</span>
+        </button>
+        <div class="empty-sub" id="generateHint" style="text-align:center;margin-top:12px">Capture at least one photo</div>
+        <button class="delete-report-btn" id="deleteReportBtn">Delete This Report</button>
+      </div>
+    </div>
+    <button class="fab" id="fab" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    </button>
+  </div>
 
-  <!-- Toast -->
-  <div class="toast" id="toast" style="display:none">✓ PDF Report downloaded</div>
+  <!-- PDF Preview -->
+  <div id="pdfPreviewOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:190;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top));background:#111;flex-shrink:0;gap:8px">
+      <button id="pdfPreviewBack" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:15px;font-weight:600;cursor:pointer;padding:10px 16px;border-radius:10px;font-family:inherit;display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg> Close
+      </button>
+      <div id="pdfPageIndicator" style="font-size:13px;color:#888;text-align:center;flex:1;font-weight:600">PDF Preview</div>
+      <button id="pdfPreviewShare" style="background:var(--accent);border:none;color:#fff;font-size:15px;font-weight:600;cursor:pointer;padding:10px 16px;border-radius:10px;font-family:inherit;flex-shrink:0">Share</button>
+    </div>
+    <div id="pdfPreviewScroll" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px;background:#1a1a1a">
+      <div id="pdfPreviewPages" style="display:flex;flex-direction:column;align-items:center;gap:12px"></div>
+    </div>
+    <div style="padding:10px 16px;padding-bottom:max(10px,env(safe-area-inset-bottom));background:#111;flex-shrink:0;text-align:center">
+      <button id="pdfPreviewClose2" style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);color:#fff;font-size:15px;font-weight:600;cursor:pointer;padding:14px;border-radius:12px;font-family:inherit">Close Preview & Return to Report</button>
+    </div>
+  </div>
+
+  <!-- About Section -->
+  <div id="aboutOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:195;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch">
+    <div style="max-width:480px;margin:0 auto;padding:20px;padding-top:max(20px,env(safe-area-inset-top))">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+        <div style="font-family:'Instrument Serif',Georgia,serif;font-size:28px;color:#fff">Field <em style="color:var(--accent)">Lens</em></div>
+        <button id="aboutClose" style="background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:14px;font-weight:600;cursor:pointer;padding:8px 16px;border-radius:8px;font-family:inherit">Close</button>
+      </div>
+      <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:8px">Purpose</div>
+      <div style="font-size:14px;color:#aab;line-height:1.6;margin-bottom:24px">
+        Field Lens is a mobile inspection photo reporting tool. Capture photos during field inspections, add observations, annotate with markup tools, and compile everything into a professional PDF or Word report — ready for submission.
+      </div>
+      <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:8px">How to Use</div>
+      <div style="font-size:14px;color:#aab;line-height:1.7;margin-bottom:24px">
+        <div style="margin-bottom:10px"><span style="color:var(--accent);font-weight:700">1.</span> Create a new report from the home screen</div>
+        <div style="margin-bottom:10px"><span style="color:var(--accent);font-weight:700">2.</span> Tap <strong style="color:#ddd">Capture</strong> to take photos or select from gallery</div>
+        <div style="margin-bottom:10px"><span style="color:var(--accent);font-weight:700">3.</span> In <strong style="color:#ddd">Photos</strong> tab, add captions and observations to each photo</div>
+        <div style="margin-bottom:10px"><span style="color:var(--accent);font-weight:700">4.</span> Use the toolbar on each photo to:</div>
+        <div style="padding-left:24px;margin-bottom:10px">
+          <div style="margin-bottom:4px"><span style="color:#888">⊞</span> Toggle full page (larger photo in report)</div>
+          <div style="margin-bottom:4px"><span style="color:#888">↑↓</span> Reorder photos</div>
+          <div style="margin-bottom:4px"><span style="color:#888">↻</span> Rotate photo</div>
+          <div style="margin-bottom:4px"><span style="color:#888">✎</span> Markup — draw, arrows, circles, text</div>
+          <div><span style="color:#888">🗑</span> Delete photo</div>
+        </div>
+        <div style="margin-bottom:10px"><span style="color:var(--accent);font-weight:700">5.</span> Go to <strong style="color:#ddd">Export</strong> tab, fill in project details</div>
+        <div style="margin-bottom:10px"><span style="color:var(--accent);font-weight:700">6.</span> Tap <strong style="color:#ddd">Preview</strong> to review, or <strong style="color:#ddd">Export</strong> to share as PDF or Word</div>
+      </div>
+      <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:8px">Report Layout</div>
+      <div style="font-size:14px;color:#aab;line-height:1.6;margin-bottom:24px">
+        By default, photos are paired 2 per page. Mark any photo as "Full Page" for a larger view — useful for detail shots that need zoom. Landscape photos are automatically sized to 6" wide.
+      </div>
+      <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:8px">Data Storage</div>
+      <div style="font-size:14px;color:#aab;line-height:1.6;margin-bottom:24px">
+        All photos and reports are saved locally on your device. No account or internet required. Photos are also saved to your iPhone Photos library.
+      </div>
+      <div style="font-size:12px;color:#556;text-align:center;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06)">Field Lens v1.0</div>
+    </div>
+  </div>
+
+  <!-- Markup Editor -->
+  <div id="markupOverlay" style="display:none;position:fixed;inset:0;background:#000;z-index:200;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top));background:#111;flex-shrink:0">
+      <button id="markupCancel" style="background:none;border:none;color:#e44;font-size:15px;font-weight:600;cursor:pointer;padding:8px;font-family:inherit">Cancel</button>
+      <div style="display:flex;gap:4px" id="markupTools">
+        <button class="mtool active" data-tool="draw" title="Draw">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
+        </button>
+        <button class="mtool" data-tool="arrow" title="Arrow">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="12 5 19 5 19 12"/></svg>
+        </button>
+        <button class="mtool" data-tool="circle" title="Circle">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+        </button>
+        <button class="mtool" data-tool="rect" title="Rectangle">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+        </button>
+        <button class="mtool" data-tool="text" title="Text">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9.5" y1="20" x2="14.5" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+        </button>
+      </div>
+      <button id="markupDone" style="background:var(--accent);border:none;color:#fff;font-size:15px;font-weight:600;cursor:pointer;padding:8px 16px;border-radius:8px;font-family:inherit">Done</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 16px;background:#111;flex-shrink:0">
+      <span style="font-size:11px;color:#888">Color:</span>
+      <button class="mcolor active" data-color="#ff3333" style="background:#ff3333"></button>
+      <button class="mcolor" data-color="#ffcc00" style="background:#ffcc00"></button>
+      <button class="mcolor" data-color="#33cc33" style="background:#33cc33"></button>
+      <button class="mcolor" data-color="#3399ff" style="background:#3399ff"></button>
+      <button class="mcolor" data-color="#ffffff" style="background:#ffffff"></button>
+      <span style="font-size:11px;color:#888;margin-left:8px">Size:</span>
+      <button class="msize active" data-size="3" style="font-size:12px">S</button>
+      <button class="msize" data-size="5" style="font-size:12px">M</button>
+      <button class="msize" data-size="8" style="font-size:12px">L</button>
+      <span style="flex:1"></span>
+      <button id="markupUndo" style="background:rgba(255,255,255,0.1);border:none;color:#aaa;font-size:12px;font-weight:600;cursor:pointer;padding:6px 12px;border-radius:6px;font-family:inherit">Undo</button>
+    </div>
+    <div style="flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#000">
+      <canvas id="markupCanvas" style="max-width:100%;max-height:100%;touch-action:none"></canvas>
+    </div>
+    <!-- Text input for markup -->
+    <div id="markupTextInput" style="display:none;position:absolute;bottom:0;left:0;right:0;background:#1c2230;padding:12px 16px;padding-bottom:max(12px,env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,0.1);z-index:210">
+      <div style="font-size:12px;color:#888;margin-bottom:6px">Enter annotation text:</div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="markupTextValue" style="flex:1;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;color:#fff;font-size:16px;font-family:inherit;outline:none" placeholder="Type here...">
+        <button id="markupTextOk" style="background:var(--accent);border:none;color:#fff;padding:10px 20px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">Add</button>
+        <button id="markupTextCancel" style="background:rgba(255,255,255,0.08);border:none;color:#aaa;padding:10px 14px;border-radius:8px;font-size:15px;cursor:pointer;font-family:inherit">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" style="display:none"></div>
+  <div class="modal-overlay" id="modalOverlay" style="display:none">
+    <div class="modal">
+      <h3 id="modalTitle"></h3>
+      <p id="modalMsg"></p>
+      <div class="modal-actions">
+        <button class="modal-cancel" id="modalCancel">Cancel</button>
+        <button class="modal-confirm" id="modalConfirm">Delete</button>
+      </div>
+    </div>
+  </div>
 </div>
 
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+:root{
+  --bg:#0a0d12;--surface:#12161e;--surface2:#181d28;--surface3:#1e2433;
+  --border:rgba(255,255,255,0.05);--border-light:rgba(255,255,255,0.08);
+  --text:#eaecf0;--text-dim:#5a6478;--text-mid:#8b95a8;
+  --accent:#0d8ce9;--accent-dark:#0970c0;--accent-glow:rgba(13,140,233,0.15);
+  --danger:#dc4a4a;--success:#22a85a;--warn:#d4960a;
+  --radius:14px;--radius-sm:10px;--radius-xs:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;min-height:-webkit-fill-available;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+html{height:-webkit-fill-available}
+.app{width:100%;max-width:100%;margin:0;min-height:100vh;min-height:-webkit-fill-available;position:relative;display:flex;flex-direction:column}
+#reportsView,#reportView{width:100%;min-height:100vh;min-height:-webkit-fill-available;display:flex;flex-direction:column}#reportView{display:none}
+
+/* Header */
+.header{padding:18px 20px 14px;padding-top:max(18px,env(safe-area-inset-top));background:linear-gradient(180deg,#10141c 0%,var(--bg) 100%);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+.header-left{flex:1}
+.logo{font-family:'Instrument Serif',Georgia,serif;font-size:30px;font-weight:400;letter-spacing:-0.02em;color:#fff}
+.logo em{color:var(--accent);font-style:italic}
+.subtitle{font-size:10px;color:var(--text-dim);margin-top:3px;letter-spacing:0.14em;text-transform:uppercase;font-weight:600}
+.header-btn{background:var(--surface2);border:1px solid var(--border-light);border-radius:var(--radius-sm);color:var(--text-mid);padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;transition:all .2s}
+.header-btn:active{background:var(--surface3);transform:scale(0.97)}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg);position:sticky;top:0;z-index:20;padding:0 4px}
+.tab{flex:1;padding:13px 0;text-align:center;font-size:12px;font-weight:600;color:var(--text-dim);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;transition:all .2s;letter-spacing:.04em;font-family:inherit;text-transform:uppercase}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.badge{background:var(--accent-glow);color:var(--accent);font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;margin-left:5px;letter-spacing:0}
+
+/* Content */
+.content{padding:20px 20px 120px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* Capture Zone */
+.capture-zone{border:1.5px dashed rgba(13,140,233,0.25);border-radius:20px;padding:48px 24px;text-align:center;cursor:pointer;transition:all .3s;background:linear-gradient(135deg,rgba(13,140,233,0.03),rgba(13,140,233,0.06));margin-bottom:20px}
+.capture-zone:active{border-color:rgba(13,140,233,0.5);background:linear-gradient(135deg,rgba(13,140,233,0.06),rgba(13,140,233,0.1))}
+.capture-btn{width:76px;height:76px;border-radius:50%;background:linear-gradient(145deg,#1a9af5,var(--accent-dark));border:none;color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;cursor:pointer;box-shadow:0 6px 32px rgba(13,140,233,0.35),inset 0 1px 0 rgba(255,255,255,0.15);transition:transform .15s}
+.capture-btn:active{transform:scale(0.93)}
+.capture-btn svg{width:30px;height:30px}
+.capture-label{font-size:17px;font-weight:700;color:#d0d5de;letter-spacing:-0.01em}
+.capture-sub{font-size:13px;color:var(--text-dim);margin-top:6px;font-weight:500}
+
+/* Thumbnail Strip */
+.thumb-strip-wrap{background:var(--surface);border-radius:var(--radius);padding:16px;border:1px solid var(--border)}
+.thumb-strip-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:13px}
+.thumb-strip-header span:first-child{font-weight:700;color:var(--text-mid)}
+.thumb-strip-header span:last-child{color:var(--text-dim);font-size:12px;font-weight:500}
+.thumb-strip{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.thumb-strip::-webkit-scrollbar{display:none}
+.thumb{position:relative;flex-shrink:0}
+.thumb img{width:64px;height:64px;object-fit:cover;border-radius:var(--radius-xs);border:1px solid var(--border-light)}
+.thumb-num{position:absolute;bottom:-5px;right:-5px;background:var(--accent);color:#fff;font-size:9px;font-weight:800;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg)}
+
+/* Photo Cards */
+.photo-card{background:var(--surface);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;border:1px solid var(--border);animation:slideUp .35s ease;box-shadow:0 2px 12px rgba(0,0,0,0.2)}
+.photo-card{content-visibility:auto;contain-intrinsic-size:auto 350px}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.photo-card img.photo-img{width:100%;height:220px;object-fit:cover;display:block}
+.photo-tag{position:absolute;top:12px;left:12px;background:rgba(0,0,0,0.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:5px 12px;border-radius:var(--radius-xs);font-size:11px;font-weight:800;color:#fff;letter-spacing:.03em}
+.photo-meta{padding:14px 16px}
+.photo-actions{display:flex;gap:4px;padding:8px 16px 14px;justify-content:flex-end;align-items:center}
+
+/* Caption */
+.caption-display{font-size:14px;color:#b8c0cc;line-height:1.6;cursor:pointer;padding:10px 12px;border-radius:var(--radius-xs);display:flex;align-items:flex-start;gap:10px;transition:background .15s;font-weight:500}
+.caption-display:active{background:rgba(255,255,255,0.03)}
+.caption-placeholder{color:var(--text-dim);font-style:italic;font-weight:400}
+.timestamp{font-size:11px;color:var(--text-dim);margin-top:8px;font-weight:500}
+
+/* Form */
+.label{font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.12em;margin-bottom:7px;display:block}
+.input,.textarea{width:100%;background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:13px 16px;color:var(--text);font-size:16px;font-family:'Plus Jakarta Sans',sans-serif;outline:none;margin-bottom:14px;transition:border-color .2s,box-shadow .2s}
+.textarea{resize:vertical;min-height:60px;border-radius:var(--radius-xs);padding:12px 14px}
+.input:focus,.textarea:focus{border-color:rgba(13,140,233,0.4);box-shadow:0 0 0 3px rgba(13,140,233,0.1)}
+
+/* Buttons */
+.icon-btn{background:none;border:none;color:var(--text-dim);cursor:pointer;padding:7px;border-radius:var(--radius-xs);display:flex;align-items:center;transition:all .15s}
+.icon-btn:active{background:rgba(255,255,255,0.06);transform:scale(0.92)}
+.icon-btn.danger{color:var(--danger)}
+.btn-primary{display:inline-block;padding:9px 18px;border-radius:var(--radius-xs);border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px;transition:transform .1s}
+.btn-primary:active{transform:scale(0.97)}
+
+/* Generate/Export Buttons */
+.generate-btn{width:100%;padding:16px;border-radius:var(--radius);border:none;background:linear-gradient(145deg,#1a9af5,var(--accent-dark));color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;box-shadow:0 4px 24px rgba(13,140,233,0.25),inset 0 1px 0 rgba(255,255,255,0.1);transition:all .2s;letter-spacing:.02em}
+.generate-btn:active{transform:scale(0.98);box-shadow:0 2px 12px rgba(13,140,233,0.2)}
+.generate-btn.disabled{background:var(--surface2);color:var(--text-dim);box-shadow:none;cursor:default;border:1px solid var(--border)}
+
+/* Summary */
+.summary-box{background:var(--surface);border-radius:var(--radius);padding:18px;margin-top:18px;border:1px solid var(--border)}
+.summary-title{font-size:12px;color:var(--text-mid);margin-bottom:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.summary-row{display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px;padding:2px 0}
+.summary-row .lbl{color:var(--text-dim);font-weight:500}.summary-row .val{color:var(--text);font-weight:700}
+
+/* Empty State */
+.empty-state{text-align:center;padding:48px 20px;color:var(--text-dim)}
+.empty-state svg{opacity:.4}
+.empty-title{margin-top:14px;font-size:16px;font-weight:700;color:var(--text-mid)}
+.empty-sub{margin-top:6px;font-size:13px;color:var(--text-dim);font-weight:500}
+
+/* FAB */
+.fab{position:fixed;bottom:28px;right:20px;bottom:calc(28px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;background:linear-gradient(145deg,#1a9af5,var(--accent-dark));box-shadow:0 6px 28px rgba(13,140,233,0.35),inset 0 1px 0 rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;z-index:50;border:none;transition:transform .15s}
+.fab:active{transform:scale(0.9)}.fab svg{width:24px;height:24px}
+
+/* Toast */
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--surface3);color:#fff;padding:13px 24px;border-radius:var(--radius);font-size:14px;font-weight:600;box-shadow:0 12px 40px rgba(0,0,0,0.5),0 0 0 1px var(--border-light);z-index:999;animation:fadeIn .3s ease;white-space:nowrap;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+.section-heading{font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;letter-spacing:-0.02em}
+.section-sub{font-size:13px;color:var(--text-dim);margin-bottom:22px;font-weight:500}
+.spacer{flex:1}
+
+/* Report Cards */
+.report-card{background:var(--surface);border-radius:var(--radius);padding:16px 18px;margin-bottom:12px;border:1px solid var(--border);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:14px;box-shadow:0 1px 4px rgba(0,0,0,0.15)}
+.report-card:active{background:var(--surface2);transform:scale(0.99)}
+.report-icon{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,var(--accent-glow),rgba(13,140,233,0.08));display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent)}
+.report-info{flex:1;min-width:0}
+.report-name{font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.01em}
+.report-meta{font-size:12px;color:var(--text-dim);margin-top:3px;font-weight:500}
+.report-status{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;flex-shrink:0;background:var(--accent-glow);color:var(--accent);letter-spacing:.02em}
+
+/* New Report Button */
+.new-report-btn{width:100%;padding:16px;border-radius:var(--radius);border:1.5px dashed rgba(13,140,233,0.25);background:linear-gradient(135deg,rgba(13,140,233,0.03),rgba(13,140,233,0.06));color:var(--accent);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:18px;transition:all .2s}
+.new-report-btn:active{background:rgba(13,140,233,0.08);border-color:rgba(13,140,233,0.4);transform:scale(0.98)}
+
+/* Saving Indicator */
+.saving-dot{width:7px;height:7px;border-radius:50%;background:var(--success);display:inline-block;margin-right:6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* Install Banner */
+.install-banner{background:linear-gradient(135deg,#141a28,#111826);border:1px solid rgba(13,140,233,0.2);border-radius:var(--radius);padding:14px 16px;margin:14px 20px 0;display:flex;align-items:center;gap:12px;animation:slideDown .4s ease}
+.install-banner.hidden{display:none}
+@keyframes slideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.install-icon{width:42px;height:42px;background:linear-gradient(145deg,#1a9af5,var(--accent-dark));border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.install-icon svg{width:22px;height:22px;color:#fff}
+.install-text{flex:1}.install-title{font-size:14px;font-weight:700;color:#fff}
+.install-sub{font-size:12px;color:var(--text-mid);margin-top:2px;line-height:1.5;font-weight:500}
+.install-dismiss{background:none;border:none;color:var(--text-dim);cursor:pointer;padding:4px;font-size:18px}
+
+/* Format Toggle */
+.format-toggle{display:flex;gap:0;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);overflow:hidden;margin-bottom:16px}
+.format-opt{flex:1;padding:11px;text-align:center;font-size:13px;font-weight:600;color:var(--text-dim);background:none;border:none;cursor:pointer;font-family:inherit;transition:all .2s}
+.format-opt.active{background:var(--accent);color:#fff}
+.layout-opt{flex:1;padding:11px;text-align:center;font-size:13px;font-weight:600;color:var(--text-dim);background:none;border:none;cursor:pointer;font-family:inherit;transition:all .2s}
+.layout-opt.active{background:var(--accent);color:#fff}
+
+/* Delete */
+.delete-report-btn{width:100%;padding:13px;border-radius:var(--radius-sm);border:1px solid rgba(220,74,74,0.2);background:rgba(220,74,74,0.06);color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:20px;transition:all .2s}
+.delete-report-btn:active{background:rgba(220,74,74,0.12)}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s ease;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.modal{background:var(--surface2);border:1px solid var(--border-light);border-radius:20px;padding:28px;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.4)}
+.modal h3{font-size:18px;font-weight:800;color:#fff;margin-bottom:8px}
+.modal p{font-size:14px;color:var(--text-mid);line-height:1.6;margin-bottom:22px;font-weight:500}
+.modal-actions{display:flex;gap:10px}
+.modal-actions button{flex:1;padding:13px;border-radius:var(--radius-sm);border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .1s}
+.modal-actions button:active{transform:scale(0.97)}
+.modal-cancel{background:var(--surface3);color:var(--text-mid)}
+.modal-confirm{background:var(--danger);color:#fff}
+
+/* Markup Tools */
+.mtool{width:42px;height:38px;border-radius:var(--radius-xs);border:none;background:rgba(255,255,255,0.06);color:#999;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.mtool.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(13,140,233,0.3)}
+.mcolor{width:30px;height:30px;border-radius:50%;border:2.5px solid transparent;cursor:pointer;transition:all .15s}
+.mcolor.active{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,0.2)}
+.msize{width:34px;height:30px;border-radius:var(--radius-xs);border:none;background:rgba(255,255,255,0.06);color:#999;cursor:pointer;font-family:inherit;font-weight:800;font-size:11px;transition:all .15s}
+.msize.active{background:var(--accent);color:#fff}
+</style>
+
 <script>
-(function() {
-  // ── State ──────────────────────────────────────────────────────
-  let photos = [];
-  let editingId = null;
-  let activeTab = 'capture';
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{})})}
 
-  // DOM refs
-  const fileInput = document.getElementById('fileInput');
-  const captureZone = document.getElementById('captureZone');
-  const captureBtn = document.getElementById('captureBtn');
-  const thumbStripWrap = document.getElementById('thumbStripWrap');
-  const thumbStrip = document.getElementById('thumbStrip');
-  const photoCount = document.getElementById('photoCount');
-  const pageCount = document.getElementById('pageCount');
-  const photoBadge = document.getElementById('photoBadge');
-  const emptyGallery = document.getElementById('emptyGallery');
-  const photoList = document.getElementById('photoList');
-  const fab = document.getElementById('fab');
-  const generateBtn = document.getElementById('generateBtn');
-  const generateHint = document.getElementById('generateHint');
-  const toast = document.getElementById('toast');
-  const reportDate = document.getElementById('reportDate');
+// IndexedDB
+const DB='FieldLensDB',DBV=2;
+function openDB(){return new Promise((r,j)=>{const q=indexedDB.open(DB,DBV);q.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('reports'))d.createObjectStore('reports',{keyPath:'id'});if(!d.objectStoreNames.contains('photos'))d.createObjectStore('photos',{keyPath:'id'})};q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)})}
+async function dbPut(s,d){const db=await openDB();return new Promise((r,j)=>{const t=db.transaction(s,'readwrite');t.objectStore(s).put(d);t.oncomplete=()=>r();t.onerror=()=>j(t.error)})}
+async function dbGet(s,id){const db=await openDB();return new Promise((r,j)=>{const t=db.transaction(s,'readonly');const q=t.objectStore(s).get(id);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)})}
+async function dbGetAll(s){const db=await openDB();return new Promise((r,j)=>{const t=db.transaction(s,'readonly');const q=t.objectStore(s).getAll();q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)})}
+async function dbDel(s,id){const db=await openDB();return new Promise((r,j)=>{const t=db.transaction(s,'readwrite');t.objectStore(s).delete(id);t.oncomplete=()=>r();t.onerror=()=>j(t.error)})}
 
-  // Set today's date
-  reportDate.value = new Date().toISOString().split('T')[0];
+// State
+let reports=[],currentReportId=null,photos=[],editingId=null,activeTab='capture',exportFormat='pdf',saveTimer=null;
 
-  // ── Tab switching ──────────────────────────────────────────────
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      const name = tab.dataset.tab;
-      document.getElementById('panel-' + name).classList.add('active');
-      activeTab = name;
-      fab.style.display = name === 'gallery' ? 'flex' : 'none';
-    });
-  });
+const $=id=>document.getElementById(id);
+const fileInput=$('fileInput'),reportsView=$('reportsView'),reportView=$('reportView'),reportsList=$('reportsList'),emptyReports=$('emptyReports'),reportTitle=$('reportTitle'),captureZone=$('captureZone'),thumbStripWrap=$('thumbStripWrap'),thumbStrip=$('thumbStrip'),photoCount=$('photoCount'),pageCount=$('pageCount'),photoBadge=$('photoBadge'),emptyGallery=$('emptyGallery'),photoList=$('photoList'),fab=$('fab'),generateBtn=$('generateBtn'),generateLabel=$('generateLabel'),generateHint=$('generateHint'),toast=$('toast'),reportDate=$('reportDate');
 
-  // ── File capture ───────────────────────────────────────────────
-  function triggerCapture() { fileInput.click(); }
-  captureZone.addEventListener('click', triggerCapture);
-  fab.addEventListener('click', triggerCapture);
+// Install banner
+const isSA=window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches;
+if(isSA||sessionStorage.getItem('instD'))$('installBanner').classList.add('hidden');
+$('dismissInstall').addEventListener('click',()=>{$('installBanner').classList.add('hidden');sessionStorage.setItem('instD','1')});
 
-  fileInput.addEventListener('change', function(e) {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-      const photo = {
-        id: Date.now() + Math.random(),
-        dataUrl: ev.target.result,
-        caption: '',
-        timestamp: new Date().toLocaleString()
-      };
-      photos.push(photo);
-      editingId = photo.id;
-      switchToTab('gallery');
-      updateAll();
+function showToast(m,d=3000){toast.textContent=m;toast.style.display='block';setTimeout(()=>{toast.style.display='none'},d)}
+function showModal(title,msg,cText){
+  $('modalTitle').textContent=title;$('modalMsg').textContent=msg;$('modalConfirm').textContent=cText;
+  $('modalOverlay').style.display='flex';
+  return new Promise(r=>{$('modalCancel').onclick=()=>{$('modalOverlay').style.display='none';r(false)};$('modalConfirm').onclick=()=>{$('modalOverlay').style.display='none';r(true)}})
+}
+
+// Reports List
+async function loadReports(){reports=await dbGetAll('reports');reports.sort((a,b)=>b.updatedAt-a.updatedAt);renderReportsList()}
+function renderReportsList(){
+  emptyReports.style.display=reports.length===0?'block':'none';
+  reportsList.innerHTML=reports.map(r=>{
+    const n=r.photoIds?r.photoIds.length:0;
+    const d=new Date(r.updatedAt).toLocaleDateString();
+    const nm=r.projectName||'Untitled Report';
+    return`<div class="report-card" data-rid="${r.id}"><div class="report-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div class="report-info"><div class="report-name">${nm}</div><div class="report-meta">${n} photo${n!==1?'s':''} · ${d}</div></div><div class="report-status">${n} photos</div></div>`
+  }).join('')
+}
+reportsList.addEventListener('click',e=>{const c=e.target.closest('.report-card');if(c)openReport(c.dataset.rid)});
+$('newReportBtn').addEventListener('click',async()=>{
+  const id='rpt_'+Date.now();
+  const r={id,projectName:'',location:'',inspector:'',date:new Date().toISOString().split('T')[0],photoIds:[],createdAt:Date.now(),updatedAt:Date.now()};
+  await dbPut('reports',r);reports.unshift(r);openReport(id)
+});
+
+// Open/Close Report
+async function openReport(id){
+  currentReportId=id;const r=await dbGet('reports',id);if(!r)return;
+  // Load all photos in parallel for speed with large reports
+  const photoPromises=(r.photoIds||[]).map(pid=>dbGet('photos',pid));
+  const loaded=await Promise.all(photoPromises);
+  photos=loaded.filter(p=>p!=null);
+  $('projectName').value=r.projectName||'';$('location').value=r.location||'';$('inspector').value=r.inspector||'';
+  reportDate.value=r.date||new Date().toISOString().split('T')[0];
+  reportTitle.textContent=r.projectName||'Untitled Report';
+  editingId=null;activeTab='capture';switchToTab('capture');updateUI();
+  reportsView.style.display='none';reportView.style.display='flex'
+}
+$('backBtn').addEventListener('click',()=>{saveReport();reportsView.style.display='flex';reportView.style.display='none';loadReports()});
+
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveReport(),800)}
+async function saveReport(){
+  if(!currentReportId)return;
+  const orig=await dbGet('reports',currentReportId);
+  const r={id:currentReportId,projectName:$('projectName').value,location:$('location').value,inspector:$('inspector').value,date:reportDate.value,photoIds:photos.map(p=>p.id),createdAt:orig?.createdAt||Date.now(),updatedAt:Date.now()};
+  await dbPut('reports',r);reportTitle.textContent=r.projectName||'Untitled Report'
+}
+['projectName','location','inspector','reportDate'].forEach(id=>{$(id).addEventListener('input',scheduleSave)});
+
+$('deleteReportBtn').addEventListener('click',async()=>{
+  if(!await showModal('Delete Report','Permanently delete this report and all photos?','Delete'))return;
+  for(const p of photos)await dbDel('photos',p.id);
+  await dbDel('reports',currentReportId);currentReportId=null;photos=[];
+  reportsView.style.display='flex';reportView.style.display='none';loadReports();showToast('Report deleted')
+});
+
+// Tabs
+document.querySelectorAll('.tab').forEach(t=>{t.addEventListener('click',()=>switchToTab(t.dataset.tab))});
+function switchToTab(n){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===n));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));$('panel-'+n).classList.add('active');activeTab=n;fab.style.display=n==='gallery'?'flex':'none'}
+
+// Photo Capture
+captureZone.addEventListener('click',()=>fileInput.click());
+fab.addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',async e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  const reader=new FileReader();
+  reader.onload=async ev=>{
+    // Compress to max 2400px and generate thumbnail for fast gallery display
+    const compressed=await compressCapture(ev.target.result);
+    const thumb=await makeThumbnail(compressed);
+    const p={id:'ph_'+Date.now()+'_'+Math.random().toString(36).substr(2,6),reportId:currentReportId,dataUrl:compressed,thumb:thumb,caption:'',fullPage:false,timestamp:new Date().toLocaleString()};
+    await dbPut('photos',p);photos.push(p);editingId=p.id;await saveReport();switchToTab('gallery');updateUI()
+  };reader.readAsDataURL(f);e.target.value=''
+});
+
+// UI Update
+function updateUI(){
+  const n=photos.length,cap=photos.filter(p=>p.caption.trim()).length;
+  // Calculate pages: full-page photos get own page, others pair up
+  let pg=0,pair=0;
+  for(const p of photos){if(p.fullPage){if(pair>0){pg++;pair=0}pg++}else{pair++;if(pair===2){pg++;pair=0}}}
+  if(pair>0)pg++;
+  photoBadge.textContent=n;photoBadge.style.display=n>0?'inline':'none';
+  thumbStripWrap.style.display=n>0?'block':'none';
+  photoCount.textContent=n+' photo'+(n!==1?'s':'')+' captured';
+  pageCount.textContent=pg+' page'+(pg!==1?'s':'')+' in report';
+  thumbStrip.innerHTML=photos.map((p,i)=>`<div class="thumb"><img src="${p.thumb||p.dataUrl}" alt="" loading="lazy"><div class="thumb-num">${i+1}</div></div>`).join('');
+  emptyGallery.style.display=n===0?'block':'none';renderPhotoList();
+  $('sumPhotos').textContent=n;$('sumPages').textContent=pg;$('sumCaptions').textContent=cap+' / '+n;
+  if(n>0){generateBtn.classList.remove('disabled');generateBtn.disabled=false;$('previewBtn').classList.remove('disabled');$('previewBtn').disabled=false;generateHint.style.display='none'}
+  else{generateBtn.classList.add('disabled');generateBtn.disabled=true;$('previewBtn').classList.add('disabled');$('previewBtn').disabled=true;generateHint.style.display='block'}
+}
+function renderPhotoList(){
+  photoList.innerHTML=photos.map((p,i)=>{
+    const ed=editingId===p.id;
+    return`<div class="photo-card" data-id="${p.id}"><div style="position:relative"><img class="photo-img" src="${p.thumb||p.dataUrl}" alt="" loading="lazy"><div class="photo-tag">#${i+1}</div>${p.fullPage?'<div style="position:absolute;top:10px;right:10px;background:rgba(0,122,204,0.85);padding:3px 8px;border-radius:5px;font-size:10px;font-weight:700;color:#fff">FULL PAGE</div>':''}</div><div class="photo-meta">${ed?`<label class="label">Observations / Caption</label><textarea class="textarea caption-edit" data-id="${p.id}" placeholder="Describe what you observed..." rows="3">${p.caption}</textarea><button class="btn-primary done-btn" data-id="${p.id}">Done</button>`:`<div class="caption-display edit-caption" data-id="${p.id}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span style="flex:1">${p.caption||'<span class="caption-placeholder">Tap to add observations...</span>'}</span></div>`}<div class="timestamp">${p.timestamp}</div></div><div class="photo-actions"><button class="icon-btn fullpage-btn" data-id="${p.id}" title="Full Page" style="${p.fullPage?'color:var(--accent)':''}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button><button class="icon-btn move-up" data-id="${p.id}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg></button><button class="icon-btn move-down" data-id="${p.id}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button><div class="spacer"></div><button class="icon-btn rotate-btn" data-id="${p.id}" title="Rotate"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button><button class="icon-btn markup-btn" data-id="${p.id}" title="Markup"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg></button><button class="icon-btn danger delete-btn" data-id="${p.id}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div></div>`
+  }).join('');
+  if(editingId){const ta=photoList.querySelector(`.caption-edit[data-id="${editingId}"]`);if(ta){ta.focus();ta.selectionStart=ta.value.length}}
+}
+
+// Photo events
+photoList.addEventListener('click',async e=>{
+  const t=e.target.closest('[data-id]');if(!t)return;const id=t.dataset.id;
+  if(t.classList.contains('edit-caption')||t.closest('.edit-caption')){editingId=id;renderPhotoList()}
+  else if(t.classList.contains('done-btn')){editingId=null;updateUI()}
+  else if(t.classList.contains('delete-btn')||t.closest('.delete-btn')){if(!await showModal('Delete Photo','Remove this photo?','Delete'))return;await dbDel('photos',id);photos=photos.filter(p=>p.id!==id);if(editingId===id)editingId=null;await saveReport();updateUI()}
+  else if(t.classList.contains('move-up')||t.closest('.move-up')){const i=photos.findIndex(p=>p.id===id);if(i>0){[photos[i],photos[i-1]]=[photos[i-1],photos[i]];await saveReport();updateUI()}}
+  else if(t.classList.contains('move-down')||t.closest('.move-down')){const i=photos.findIndex(p=>p.id===id);if(i<photos.length-1){[photos[i],photos[i+1]]=[photos[i+1],photos[i]];await saveReport();updateUI()}}
+  else if(t.classList.contains('markup-btn')||t.closest('.markup-btn')){openMarkupEditor(id)}
+  else if(t.classList.contains('rotate-btn')||t.closest('.rotate-btn')){rotatePhoto(id)}
+  else if(t.classList.contains('fullpage-btn')||t.closest('.fullpage-btn')){
+    const photo=photos.find(p=>p.id===id);
+    if(photo){photo.fullPage=!photo.fullPage;await dbPut('photos',photo);await saveReport();updateUI();showToast(photo.fullPage?'Full page enabled':'Full page disabled')}
+  }
+});
+photoList.addEventListener('input',async e=>{if(e.target.classList.contains('caption-edit')){const id=e.target.dataset.id;const p=photos.find(x=>x.id===id);if(p){p.caption=e.target.value;await dbPut('photos',p);scheduleSave()}}});
+
+// Format toggle
+document.querySelectorAll('.format-opt').forEach(b=>{b.addEventListener('click',()=>{document.querySelectorAll('.format-opt').forEach(x=>x.classList.remove('active'));b.classList.add('active');exportFormat=b.dataset.fmt;generateLabel.textContent=exportFormat==='pdf'?'Export PDF Report':'Export Word Document'})});
+
+// Layout toggle (1 or 2 photos per page)
+
+// Rotate photo 90 degrees clockwise
+async function rotatePhoto(id){
+  const photo=photos.find(p=>p.id===id);
+  if(!photo)return;
+  const img=new Image();
+  img.onload=async()=>{
+    const c=document.createElement('canvas');
+    c.width=img.height;c.height=img.width;
+    const ctx=c.getContext('2d');
+    ctx.translate(c.width/2,c.height/2);
+    ctx.rotate(Math.PI/2);
+    ctx.drawImage(img,-img.width/2,-img.height/2);
+    photo.dataUrl=c.toDataURL('image/jpeg',0.92);
+    photo.thumb=await makeThumbnail(photo.dataUrl);
+    await dbPut('photos',photo);
+    await saveReport();
+    updateUI();
+    showToast('Photo rotated');
+  };
+  img.src=photo.dataUrl;
+}
+
+// Resize — higher quality for inspection photos
+// Target: 3.5 inches at 150 DPI = 525px height, good quality JPEG
+function resizeImage(u,mW,mH){return new Promise(r=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;const s=Math.min(mW/w,mH/h,1);w=Math.round(w*s);h=Math.round(h*s);const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);r({dataUrl:c.toDataURL('image/jpeg',0.94),w,h})};img.src=u})}
+
+// Generate small thumbnail for gallery display (300px max)
+function makeThumbnail(dataUrl){
+  return new Promise(r=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.width,h=img.height;
+      const s=Math.min(400/w,400/h,1);
+      w=Math.round(w*s);h=Math.round(h*s);
+      const c=document.createElement('canvas');
+      c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      r(c.toDataURL('image/jpeg',0.7));
     };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  });
+    img.src=dataUrl;
+  })
+}
 
-  function switchToTab(name) {
-    document.querySelectorAll('.tab').forEach(t => {
-      t.classList.toggle('active', t.dataset.tab === name);
-    });
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    document.getElementById('panel-' + name).classList.add('active');
-    activeTab = name;
-    fab.style.display = name === 'gallery' ? 'flex' : 'none';
-  }
+// Compress captured photo to max 2400px dimension (saves memory, still high quality for reports)
+function compressCapture(dataUrl){
+  return new Promise(r=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.width,h=img.height;
+      const maxDim=2400;
+      if(w<=maxDim&&h<=maxDim){r(dataUrl);return}
+      const s=Math.min(maxDim/w,maxDim/h);
+      w=Math.round(w*s);h=Math.round(h*s);
+      const c=document.createElement('canvas');
+      c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      r(c.toDataURL('image/jpeg',0.92));
+    };
+    img.src=dataUrl;
+  })
+}
 
-  // ── Update UI ──────────────────────────────────────────────────
-  function updateAll() {
-    const n = photos.length;
-    const pages = Math.ceil(n / 2);
-    const captioned = photos.filter(p => p.caption.trim()).length;
-
-    // Badge
-    photoBadge.textContent = n;
-    photoBadge.style.display = n > 0 ? 'inline' : 'none';
-
-    // Thumb strip
-    thumbStripWrap.style.display = n > 0 ? 'block' : 'none';
-    photoCount.textContent = n + ' photo' + (n !== 1 ? 's' : '') + ' captured';
-    pageCount.textContent = pages + ' page' + (pages !== 1 ? 's' : '') + ' in report';
-    thumbStrip.innerHTML = photos.map((p, i) => `
-      <div class="thumb">
-        <img src="${p.dataUrl}" alt="">
-        <div class="thumb-num">${i + 1}</div>
-      </div>
-    `).join('');
-
-    // Gallery
-    emptyGallery.style.display = n === 0 ? 'block' : 'none';
-    renderPhotoList();
-
-    // Report summary
-    document.getElementById('sumPhotos').textContent = n;
-    document.getElementById('sumPages').textContent = pages;
-    document.getElementById('sumCaptions').textContent = captioned + ' / ' + n;
-
-    // Generate button
-    if (n > 0) {
-      generateBtn.classList.remove('disabled');
-      generateBtn.disabled = false;
-      generateHint.style.display = 'none';
-    } else {
-      generateBtn.classList.add('disabled');
-      generateBtn.disabled = true;
-      generateHint.style.display = 'block';
-    }
-  }
-
-  function renderPhotoList() {
-    photoList.innerHTML = photos.map((photo, idx) => {
-      const isEditing = editingId === photo.id;
-      return `
-      <div class="photo-card" data-id="${photo.id}">
-        <div style="position:relative">
-          <img class="photo-img" src="${photo.dataUrl}" alt="">
-          <div class="photo-tag">#${idx + 1}</div>
-        </div>
-        <div class="photo-meta">
-          ${isEditing ? `
-            <label class="label">Observations / Caption</label>
-            <textarea class="textarea caption-edit" data-id="${photo.id}" placeholder="Describe what you observed during inspection..." rows="3">${photo.caption}</textarea>
-            <button class="btn-primary done-btn" data-id="${photo.id}">Done</button>
-          ` : `
-            <div class="caption-display edit-caption" data-id="${photo.id}">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              <span style="flex:1">${photo.caption || '<span class="caption-placeholder">Tap to add observations...</span>'}</span>
-            </div>
-          `}
-          <div class="timestamp">${photo.timestamp}</div>
-        </div>
-        <div class="photo-actions">
-          <button class="icon-btn move-up" data-id="${photo.id}" title="Move up">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
-          </button>
-          <button class="icon-btn move-down" data-id="${photo.id}" title="Move down">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="spacer"></div>
-          <button class="icon-btn danger delete-btn" data-id="${photo.id}" title="Delete">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          </button>
-        </div>
-      </div>`;
-    }).join('');
-
-    // Focus textarea if editing
-    if (editingId) {
-      const ta = photoList.querySelector(`.caption-edit[data-id="${editingId}"]`);
-      if (ta) ta.focus();
-    }
-  }
-
-  // ── Event delegation ───────────────────────────────────────────
-  photoList.addEventListener('click', function(e) {
-    const target = e.target.closest('[data-id]');
-    if (!target) return;
-    const id = parseFloat(target.dataset.id);
-
-    if (target.classList.contains('edit-caption') || target.closest('.edit-caption')) {
-      editingId = id;
-      renderPhotoList();
-    }
-    else if (target.classList.contains('done-btn')) {
-      editingId = null;
-      renderPhotoList();
-    }
-    else if (target.classList.contains('delete-btn') || target.closest('.delete-btn')) {
-      if (confirm('Delete this photo?')) {
-        photos = photos.filter(p => p.id !== id);
-        if (editingId === id) editingId = null;
-        updateAll();
+// Share file via native share sheet (works in WKWebView)
+async function shareFile(blob,fileName){
+  // Use Web Share API (native iOS share sheet)
+  if(navigator.share && navigator.canShare){
+    try{
+      const file=new File([blob],fileName,{type:blob.type});
+      if(navigator.canShare({files:[file]})){
+        await navigator.share({files:[file],title:fileName});
+        return true
       }
+    }catch(e){
+      // User cancelled share - this is normal, just return
+      if(e.name==='AbortError')return false;
+      console.log('Share API error:',e)
     }
-    else if (target.classList.contains('move-up') || target.closest('.move-up')) {
-      const idx = photos.findIndex(p => p.id === id);
-      if (idx > 0) { [photos[idx], photos[idx-1]] = [photos[idx-1], photos[idx]]; updateAll(); }
-    }
-    else if (target.classList.contains('move-down') || target.closest('.move-down')) {
-      const idx = photos.findIndex(p => p.id === id);
-      if (idx < photos.length - 1) { [photos[idx], photos[idx+1]] = [photos[idx+1], photos[idx]]; updateAll(); }
-    }
-  });
-
-  photoList.addEventListener('input', function(e) {
-    if (e.target.classList.contains('caption-edit')) {
-      const id = parseFloat(e.target.dataset.id);
-      const photo = photos.find(p => p.id === id);
-      if (photo) photo.caption = e.target.value;
-    }
-  });
-
-  // ── Resize image util ─────────────────────────────────────────
-  function resizeImage(dataUrl, maxW, maxH) {
-    return new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => {
-        let w = img.width, h = img.height;
-        const ratio = Math.min(maxW / w, maxH / h, 1);
-        w *= ratio; h *= ratio;
-        const c = document.createElement('canvas');
-        c.width = w; c.height = h;
-        c.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve({ dataUrl: c.toDataURL('image/jpeg', 0.85), w, h });
-      };
-      img.src = dataUrl;
+  }
+  // Fallback: save as download link without opening
+  try{
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=fileName;
+    a.style.display='none';
+    document.body.appendChild(a);
+    a.click();
+    // Clean up immediately
+    requestAnimationFrame(()=>{
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     });
+    showToast('File saved to Downloads');
+  }catch(e){
+    console.log('Download fallback error:',e);
+    showToast('Could not save file');
+  }
+  return true
+}
+
+// Generate PDF — photos at 3.5" height (88.9mm), 14pt text
+async function generatePDF(returnBlob){
+  const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'letter'});
+  const pW=215.9,pH=279.4,m=20,cW=pW-m*2;
+  const maxLandscapeW=152.4; // 6 inches in mm
+  const pn=$('projectName').value,loc=$('location').value,insp=$('inspector').value,dt=reportDate.value;
+
+  // Cover page
+  doc.setFillColor(24,32,44);doc.rect(0,0,pW,pH,'F');doc.setFillColor(0,122,204);doc.rect(0,90,pW,4,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(28);doc.setFont('helvetica','bold');doc.text('INSPECTION REPORT',m,120);
+  doc.setFontSize(14);doc.setFont('helvetica','normal');doc.setTextColor(180,195,215);let y=140;
+  if(pn){doc.text('Project: '+pn,m,y);y+=9}if(loc){doc.text('Location: '+loc,m,y);y+=9}
+  if(insp){doc.text('Inspector: '+insp,m,y);y+=9}doc.text('Date: '+dt,m,y);y+=9;
+  doc.text('Total Photos: '+photos.length,m,y);
+  doc.setTextColor(100,120,145);doc.setFontSize(10);doc.text('Generated with Field Lens',m,pH-20);
+
+  // Build page layout: full-page photos get own page, others pair up 2-per-page
+  // Group photos into pages
+  const pages=[];
+  let currentPair=[];
+  for(let i=0;i<photos.length;i++){
+    const p=photos[i];
+    if(p.fullPage){
+      if(currentPair.length>0){pages.push(currentPair);currentPair=[]}
+      pages.push([p]); // full page = alone
+    }else{
+      currentPair.push(p);
+      if(currentPair.length===2){pages.push(currentPair);currentPair=[]}
+    }
+  }
+  if(currentPair.length>0)pages.push(currentPair);
+
+  const totalPages=pages.length;
+  for(let pg=0;pg<pages.length;pg++){
+    const pagePhotos=pages[pg];
+    const isFullPage=pagePhotos.length===1&&pagePhotos[0].fullPage;
+    const photoH=isFullPage?180:88.9; // full page: ~7", paired: 3.5"
+
+    doc.addPage();
+    doc.setFillColor(0,122,204);doc.rect(m,12,cW,0.8,'F');
+    doc.setFontSize(10);doc.setTextColor(120,130,150);doc.setFont('helvetica','normal');
+    doc.text(pn?pn+'  |  '+dt:'Inspection Report  |  '+dt,m,10);
+    doc.text('Page '+(pg+1)+' of '+totalPages,pW-m,10,{align:'right'});
+    let cY=22;
+
+    for(let j=0;j<pagePhotos.length;j++){
+      const p=pagePhotos[j];
+      const photoIdx=photos.indexOf(p);
+      const{dataUrl,w,h}=await resizeImage(p.dataUrl,cW*5,photoH*8);
+      const aspect=w/h;
+      const isLandscape=aspect>1.2;
+
+      let maxW=isLandscape?Math.min(maxLandscapeW,cW):cW;
+      let dW=Math.min(maxW,aspect*photoH);
+      let dH=dW/aspect;
+      if(dH>photoH){dH=photoH;dW=dH*aspect}
+      if(dW>maxW){dW=maxW;dH=dW/aspect}
+      const iX=m+(cW-dW)/2;
+
+      doc.setFontSize(14);doc.setFont('helvetica','bold');doc.setTextColor(0,122,204);
+      doc.text('Photo '+(photoIdx+1),m,cY);cY+=5;
+
+      doc.setDrawColor(200,205,215);doc.setLineWidth(0.3);
+      doc.rect(iX-0.5,cY-0.5,dW+1,dH+1);
+
+      doc.addImage(dataUrl,'JPEG',iX,cY,dW,dH);cY+=dH+3;
+
+      if(p.caption){
+        doc.setFontSize(14);doc.setFont('helvetica','normal');doc.setTextColor(40,45,55);
+        const l=doc.splitTextToSize(p.caption,cW);
+        doc.text(l,m,cY+5);cY+=l.length*6+5
+      }
+
+      doc.setFontSize(10);doc.setTextColor(140,145,155);
+      doc.text(p.timestamp,m,cY+3);cY+=16
+    }
   }
 
-  // ── Generate PDF ───────────────────────────────────────────────
-  generateBtn.addEventListener('click', async function() {
-    if (photos.length === 0) return;
-    generateBtn.textContent = 'Generating...';
-    generateBtn.disabled = true;
+  if(returnBlob){return doc.output('blob')}
+  const pdfBlob=doc.output('blob');
+  await shareFile(pdfBlob,'Inspection_Report_'+dt+'.pdf')
+}
 
-    try {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
-      const pageW = 215.9, pageH = 279.4;
-      const margin = 20;
-      const contentW = pageW - margin * 2;
+// Generate DOCX
+// Load docx.js from local bundle
+async function loadDocxLib(){
+  if(window.docx)return window.docx;
+  return new Promise((r,j)=>{const s=document.createElement('script');s.src='https://unpkg.com/docx@8.5.0/build/index.umd.js';s.onload=()=>r(window.docx);s.onerror=()=>j(new Error('Failed to load docx library. Check your internet connection.'));document.head.appendChild(s)})
+}
+function dataUrlToU8(u){const b=atob(u.split(',')[1]);const a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}
 
-      const projectName = document.getElementById('projectName').value;
-      const location = document.getElementById('location').value;
-      const inspector = document.getElementById('inspector').value;
-      const date = reportDate.value;
+async function generateDOCX(){
+  const D=await loadDocxLib();
+  const{Document,Packer,Paragraph,TextRun,ImageRun,PageBreak,AlignmentType,Header,Footer,PageNumber,BorderStyle}=D;
+  const pn=$('projectName').value||'Inspection Report',loc=$('location').value,insp=$('inspector').value,dt=reportDate.value;
+  const ch=[];
 
-      // ── Cover page ─────────────────────────────────────────────
-      doc.setFillColor(24, 32, 44);
-      doc.rect(0, 0, pageW, pageH, 'F');
-      doc.setFillColor(0, 122, 204);
-      doc.rect(0, 90, pageW, 4, 'F');
+  // Cover page — 14pt text
+  ch.push(new Paragraph({spacing:{before:3000},children:[]}));
+  ch.push(new Paragraph({alignment:AlignmentType.LEFT,spacing:{after:200},children:[new TextRun({text:'INSPECTION REPORT',bold:true,size:56,font:'Arial',color:'1A2030'})]}));
+  ch.push(new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:6,color:'007ACC',space:1}},spacing:{after:400},children:[]}));
+  if(pn)ch.push(new Paragraph({spacing:{after:120},children:[new TextRun({text:'Project: '+pn,size:28,font:'Arial',color:'444444'})]}));
+  if(loc)ch.push(new Paragraph({spacing:{after:120},children:[new TextRun({text:'Location: '+loc,size:28,font:'Arial',color:'444444'})]}));
+  if(insp)ch.push(new Paragraph({spacing:{after:120},children:[new TextRun({text:'Inspector: '+insp,size:28,font:'Arial',color:'444444'})]}));
+  ch.push(new Paragraph({spacing:{after:120},children:[new TextRun({text:'Date: '+dt,size:28,font:'Arial',color:'444444'})]}));
+  ch.push(new Paragraph({spacing:{after:120},children:[new TextRun({text:'Total Photos: '+photos.length,size:28,font:'Arial',color:'444444'})]}));
 
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(28);
-      doc.setFont('helvetica', 'bold');
-      doc.text('INSPECTION REPORT', margin, 120);
+  // Photo pages — per-photo full page support
+  const maxImgW=468; // 6.5 inches in points
+  const landscapeMaxW=432; // 6 inches in points
 
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(180, 195, 215);
-      let y = 140;
-      if (projectName) { doc.text('Project: ' + projectName, margin, y); y += 8; }
-      if (location) { doc.text('Location: ' + location, margin, y); y += 8; }
-      if (inspector) { doc.text('Inspector: ' + inspector, margin, y); y += 8; }
-      doc.text('Date: ' + date, margin, y); y += 8;
-      doc.text('Total Photos: ' + photos.length, margin, y);
+  // Build same page layout as PDF
+  const dPages=[];
+  let dPair=[];
+  for(let i=0;i<photos.length;i++){
+    const p=photos[i];
+    if(p.fullPage){
+      if(dPair.length>0){dPages.push(dPair);dPair=[]}
+      dPages.push([p]);
+    }else{
+      dPair.push(p);
+      if(dPair.length===2){dPages.push(dPair);dPair=[]}
+    }
+  }
+  if(dPair.length>0)dPages.push(dPair);
 
-      doc.setTextColor(100, 120, 145);
-      doc.setFontSize(9);
-      doc.text('Generated with Field Lens — Inspection Photo Report Tool', margin, pageH - 20);
+  for(let pg=0;pg<dPages.length;pg++){
+    ch.push(new Paragraph({children:[new PageBreak()]}));
+    const pagePhotos=dPages[pg];
+    for(let j=0;j<pagePhotos.length;j++){
+    const p=pagePhotos[j];
+    const photoIdx=photos.indexOf(p);
+    const isFullPg=pagePhotos.length===1&&p.fullPage;
+    const imgTargetH=isFullPg?580:336;
+    const{dataUrl,w,h}=await resizeImage(p.dataUrl,1600,700);
+    const d=dataUrlToU8(dataUrl);const t=dataUrl.includes('image/png')?'png':'jpg';
+    const aspect=w/h;
+    const isLandscape=aspect>1.2;
+    let imgW=Math.round(aspect*imgTargetH);
+    let imgH=imgTargetH;
+    const wLimit=isLandscape?landscapeMaxW:maxImgW;
+    if(imgW>wLimit){imgW=wLimit;imgH=Math.round(wLimit/aspect)}
 
-      // ── Photo pages ────────────────────────────────────────────
-      const photoAreaH = 90;
-      const captionGap = 3;
-      const blockGap = 12;
-      const startY = 25;
+    // Photo label — 14pt
+    ch.push(new Paragraph({spacing:{before:200,after:100},children:[new TextRun({text:'Photo '+(photoIdx+1),bold:true,size:28,font:'Arial',color:'007ACC'})]}));
 
-      for (let i = 0; i < photos.length; i += 2) {
-        doc.addPage();
+    // Image
+    ch.push(new Paragraph({alignment:AlignmentType.CENTER,children:[new ImageRun({type:t,data:d,transformation:{width:imgW,height:imgH},altText:{title:'Photo '+(photoIdx+1),description:p.caption||'Inspection photo',name:'photo'+(photoIdx+1)}})]}));
 
-        // Header
-        doc.setFillColor(0, 122, 204);
-        doc.rect(margin, 12, contentW, 0.8, 'F');
-        doc.setFontSize(8);
-        doc.setTextColor(120, 130, 150);
-        doc.setFont('helvetica', 'normal');
-        const header = projectName ? projectName + '  |  ' + date : 'Inspection Report  |  ' + date;
-        doc.text(header, margin, 10);
-        doc.text('Page ' + (Math.floor(i/2)+1) + ' of ' + Math.ceil(photos.length/2), pageW - margin, 10, { align: 'right' });
+    // Caption — 14pt
+    if(p.caption)ch.push(new Paragraph({spacing:{before:100,after:60},children:[new TextRun({text:p.caption,size:28,font:'Arial',color:'333333'})]}));
 
-        let curY = startY;
+    // Timestamp — 10pt
+    ch.push(new Paragraph({spacing:{after:240},children:[new TextRun({text:p.timestamp,size:20,font:'Arial',color:'999999',italics:true})]}))
+  } // end pagePhotos loop
+  } // end dPages loop
 
-        for (let j = 0; j < 2 && i + j < photos.length; j++) {
-          const photo = photos[i + j];
-          const photoNum = i + j + 1;
+  const doc=new Document({
+    styles:{default:{document:{run:{font:'Arial',size:28}}}},
+    sections:[{
+      properties:{page:{size:{width:12240,height:15840},margin:{top:1440,right:1440,bottom:1440,left:1440}}},
+      headers:{default:new Header({children:[new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:1,color:'007ACC',space:4}},children:[new TextRun({text:pn+'  |  '+dt,size:20,font:'Arial',color:'888888'})]})]})} ,
+      footers:{default:new Footer({children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:'Page ',size:20,font:'Arial',color:'888888'}),new TextRun({children:[PageNumber.CURRENT],size:20,font:'Arial',color:'888888'})]})]})},
+      children:ch
+    }]
+  });
 
-          const { dataUrl, w, h } = await resizeImage(photo.dataUrl, contentW, photoAreaH);
-          const displayW = Math.min(contentW, (w / h) * photoAreaH);
-          const displayH = (displayW / w) * h;
-          const imgX = margin + (contentW - displayW) / 2;
+  const blob=await Packer.toBlob(doc);
+  await shareFile(blob,'Inspection_Report_'+dt+'.docx')
+}
 
-          // Photo number
-          doc.setFontSize(9);
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor(0, 122, 204);
-          doc.text('Photo ' + photoNum, margin, curY);
-          curY += 4;
+// Preview PDF — render pages as canvas images (no iframe)
+let currentPdfBlob=null;
 
-          // Border
-          doc.setDrawColor(210, 215, 225);
-          doc.setLineWidth(0.3);
-          doc.rect(imgX - 1, curY - 1, displayW + 2, displayH + 2);
+async function renderPreviewPages(){
+  const pn=$('projectName').value,loc=$('location').value,insp=$('inspector').value,dt=reportDate.value;
+  const W=612,H=792; // smaller canvas for preview (saves memory with many pages)
+  const previewPages=[];
 
-          // Image
-          doc.addImage(dataUrl, 'JPEG', imgX, curY, displayW, displayH);
-          curY += displayH + captionGap;
+  // Build page groups
+  const pagesList=[];
+  let pair=[];
+  for(const p of photos){
+    if(p.fullPage){if(pair.length>0){pagesList.push(pair);pair=[]}pagesList.push([p])}
+    else{pair.push(p);if(pair.length===2){pagesList.push(pair);pair=[]}}
+  }
+  if(pair.length>0)pagesList.push(pair);
 
-          // Caption
-          if (photo.caption) {
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(40, 45, 55);
-            const lines = doc.splitTextToSize(photo.caption, contentW);
-            doc.text(lines, margin, curY + 4);
-            curY += lines.length * 5 + 4;
+  // Cover page
+  const cc=document.createElement('canvas');cc.width=W;cc.height=H;
+  const cx=cc.getContext('2d');
+  cx.fillStyle='#182c44';cx.fillRect(0,0,W,H);
+  cx.fillStyle='#0d8ce9';cx.fillRect(0,255,W,12);
+  cx.fillStyle='#fff';cx.font='bold 34px Arial';cx.fillText('INSPECTION REPORT',57,345);
+  cx.fillStyle='#b4c3d7';cx.font='17px Arial';let cy=400;
+  if(pn){cx.fillText('Project: '+pn,57,cy);cy+=26}
+  if(loc){cx.fillText('Location: '+loc,57,cy);cy+=26}
+  if(insp){cx.fillText('Inspector: '+insp,57,cy);cy+=26}
+  cx.fillText('Date: '+dt,57,cy);cy+=26;
+  cx.fillText('Total Photos: '+photos.length,57,cy);
+  previewPages.push(cc.toDataURL('image/jpeg',0.8));
+
+  // Photo pages
+  for(let pg=0;pg<pagesList.length;pg++){
+    const pc=document.createElement('canvas');pc.width=W;pc.height=H;
+    const px=pc.getContext('2d');
+    px.fillStyle='#fff';px.fillRect(0,0,W,H);
+    px.fillStyle='#0d8ce9';px.fillRect(57,35,498,2);
+    px.fillStyle='#788496';px.font='12px Arial';
+    px.fillText((pn||'Inspection Report')+'  |  '+dt,57,30);
+    const pgText='Page '+(pg+1)+' of '+pagesList.length;
+    px.fillText(pgText,W-57-px.measureText(pgText).width,30);
+
+    const pPhotos=pagesList[pg];
+    const isFull=pPhotos.length===1&&pPhotos[0].fullPage;
+    let py=60;
+
+    for(let j=0;j<pPhotos.length;j++){
+      const p=pPhotos[j];const pidx=photos.indexOf(p);
+      px.fillStyle='#0d8ce9';px.font='bold 17px Arial';
+      px.fillText('Photo '+(pidx+1),57,py);py+=17;
+      const tH=isFull?500:240,tW=498;
+      await new Promise(res=>{
+        const im=new Image();
+        im.onload=()=>{
+          const a=im.width/im.height;
+          let dw=Math.min(tW,a*tH),dh=dw/a;
+          if(dh>tH){dh=tH;dw=dh*a}
+          const dx=57+(tW-dw)/2;
+          px.strokeStyle='#d0d5de';px.lineWidth=1;px.strokeRect(dx-1,py-1,dw+2,dh+2);
+          px.drawImage(im,dx,py,dw,dh);py+=dh+8;
+          if(p.caption){
+            px.fillStyle='#282d37';px.font='17px Arial';
+            const words=p.caption.split(' ');let ln='';
+            for(const w of words){
+              const t=ln+(ln?' ':'')+w;
+              if(px.measureText(t).width>tW&&ln){px.fillText(ln,57,py);py+=21;ln=w}
+              else{ln=t}
+            }
+            if(ln){px.fillText(ln,57,py);py+=21}
           }
-
-          // Timestamp
-          doc.setFontSize(7);
-          doc.setTextColor(160, 165, 175);
-          doc.text(photo.timestamp, margin, curY + 2);
-          curY += blockGap + 6;
-        }
-      }
-
-      // Save — this triggers Safari's native download
-      doc.save('Inspection_Report_' + date + '.pdf');
-
-      // Toast
-      toast.style.display = 'block';
-      setTimeout(() => { toast.style.display = 'none'; }, 3000);
-
-    } catch(err) {
-      console.error('PDF error:', err);
-      alert('Error generating PDF. Please try again.');
+          px.fillStyle='#8c919b';px.font='10px Arial';px.fillText(p.timestamp,57,py);py+=28;
+          res();
+        };
+        im.onerror=res;
+        im.src=p.thumb||p.dataUrl;
+      });
     }
+    previewPages.push(pc.toDataURL('image/jpeg',0.8));
+  }
+  return previewPages;
+}
 
-    generateBtn.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Generate PDF Report';
-    generateBtn.disabled = false;
-  });
+$('previewBtn').addEventListener('click',async()=>{
+  if(photos.length===0)return;
+  $('previewBtn').disabled=true;
+  $('pdfPageIndicator').textContent='Generating preview...';
+  $('pdfPreviewPages').innerHTML='<div style="color:#888;padding:40px;text-align:center">Rendering pages...</div>';
+  $('pdfPreviewOverlay').style.display='flex';
+  try{
+    // Generate the actual PDF blob for sharing
+    currentPdfBlob=await generatePDF(true);
+    // Render preview images
+    const pages=await renderPreviewPages();
+    const container=$('pdfPreviewPages');
+    container.innerHTML='';
+    for(let i=0;i<pages.length;i++){
+      const lbl=document.createElement('div');
+      lbl.style.cssText='font-size:11px;color:#666;text-align:center;margin-bottom:4px;font-weight:600;';
+      lbl.textContent=(i===0?'Cover Page':'Page '+i)+' of '+(pages.length-1)+' pages';
+      container.appendChild(lbl);
+      const img=document.createElement('img');
+      img.src=pages[i];
+      img.style.cssText='width:100%;max-width:400px;border-radius:6px;box-shadow:0 2px 16px rgba(0,0,0,0.4);background:#fff;margin-bottom:16px;';
+      container.appendChild(img);
+    }
+    $('pdfPageIndicator').textContent=pages.length+' pages';
+  }catch(err){
+    console.error(err);
+    $('pdfPreviewPages').innerHTML='<div style="color:#f66;padding:40px;text-align:center">Error: '+err.message+'</div>';
+  }
+  $('previewBtn').disabled=false;
+});
 
-  // Init
-  updateAll();
-})();
+$('pdfPreviewBack').addEventListener('click',closePdfPreview);
+$('pdfPreviewClose2').addEventListener('click',closePdfPreview);
+
+function closePdfPreview(){
+  $('pdfPreviewOverlay').style.display='none';
+  $('pdfPreviewPages').innerHTML='';
+  $('pdfPageIndicator').textContent='PDF Preview';
+  if(currentPdfBlob){URL.revokeObjectURL(currentPdfBlob);currentPdfBlob=null}
+}
+
+$('pdfPreviewShare').addEventListener('click',async()=>{
+  if(currentPdfBlob){
+    const dt=reportDate.value;
+    const shared=await shareFile(currentPdfBlob,'Inspection_Report_'+dt+'.pdf');
+    if(shared)closePdfPreview();
+  }
+});
+
+// About
+$('aboutBtn').addEventListener('click',()=>{$('aboutOverlay').style.display='flex'});
+$('aboutClose').addEventListener('click',()=>{$('aboutOverlay').style.display='none'});
+
+// Generate (export) button
+generateBtn.addEventListener('click',async()=>{
+  if(photos.length===0)return;generateBtn.disabled=true;generateLabel.textContent='Exporting...';
+  try{
+    if(exportFormat==='pdf')await generatePDF();else await generateDOCX();
+    showToast('✓ '+(exportFormat==='pdf'?'PDF':'Word doc')+' ready')
+  }catch(err){
+    console.error(err);
+    alert('Error generating report: '+err.message+'\n\nCheck your internet connection.')
+  }
+  generateLabel.textContent=exportFormat==='pdf'?'Export PDF Report':'Export Word Document';generateBtn.disabled=false
+});
+
+// ═══════════════════════════════════════════════════════════
+// MARKUP EDITOR
+// ═══════════════════════════════════════════════════════════
+
+let markupPhotoId=null;
+let markupTool='draw';
+let markupColor='#ff3333';
+let markupSize=3;
+let markupHistory=[];
+let markupDrawing=false;
+let markupStartX=0,markupStartY=0;
+let markupBaseImage=null;
+
+const markupOverlay=$('markupOverlay');
+const markupCanvas=$('markupCanvas');
+const mCtx=markupCanvas.getContext('2d');
+
+function openMarkupEditor(id){
+  const photo=photos.find(p=>p.id===id);
+  if(!photo)return;
+  markupPhotoId=id;
+  markupHistory=[];
+  markupOverlay.style.display='flex';
+
+  const img=new Image();
+  img.onload=()=>{
+    const maxW=window.innerWidth;
+    const maxH=window.innerHeight-120;
+    let w=img.width,h=img.height;
+    const scale=Math.min(maxW/w,maxH/h,1);
+    markupCanvas.width=Math.round(w*scale);
+    markupCanvas.height=Math.round(h*scale);
+    mCtx.drawImage(img,0,0,markupCanvas.width,markupCanvas.height);
+    markupBaseImage=mCtx.getImageData(0,0,markupCanvas.width,markupCanvas.height);
+    markupHistory=[];
+  };
+  img.src=photo.dataUrl;
+}
+
+document.querySelectorAll('.mtool').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.mtool').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    markupTool=b.dataset.tool;
+  })
+});
+document.querySelectorAll('.mcolor').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.mcolor').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    markupColor=b.dataset.color;
+  })
+});
+document.querySelectorAll('.msize').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.msize').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    markupSize=parseInt(b.dataset.size);
+  })
+});
+
+function getCanvasPos(e){
+  const r=markupCanvas.getBoundingClientRect();
+  const t=e.touches?e.touches[0]:e;
+  return{x:(t.clientX-r.left)*(markupCanvas.width/r.width),y:(t.clientY-r.top)*(markupCanvas.height/r.height)}
+}
+function saveState(){markupHistory.push(mCtx.getImageData(0,0,markupCanvas.width,markupCanvas.height))}
+
+$('markupUndo').addEventListener('click',()=>{
+  if(markupHistory.length>0)mCtx.putImageData(markupHistory.pop(),0,0);
+  else if(markupBaseImage)mCtx.putImageData(markupBaseImage,0,0);
+});
+
+markupCanvas.addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  markupDrawing=true;
+  const p=getCanvasPos(e);
+  markupStartX=p.x;markupStartY=p.y;
+  if(markupTool==='draw'){
+    saveState();
+    mCtx.beginPath();mCtx.moveTo(p.x,p.y);
+    mCtx.strokeStyle=markupColor;mCtx.lineWidth=markupSize;
+    mCtx.lineCap='round';mCtx.lineJoin='round';
+  }else if(markupTool==='text'){
+    saveState();
+    markupDrawing=false;
+    markupTextX=p.x;markupTextY=p.y;
+    $('markupTextInput').style.display='block';
+    $('markupTextValue').value='';
+    $('markupTextValue').focus();
+  }else{saveState()}
+});
+
+markupCanvas.addEventListener('pointermove',e=>{
+  if(!markupDrawing)return;e.preventDefault();
+  const p=getCanvasPos(e);
+  if(markupTool==='draw'){
+    mCtx.lineTo(p.x,p.y);mCtx.stroke();
+  }else if(markupTool==='arrow'||markupTool==='circle'||markupTool==='rect'){
+    if(markupHistory.length>0)mCtx.putImageData(markupHistory[markupHistory.length-1],0,0);
+    mCtx.strokeStyle=markupColor;mCtx.lineWidth=markupSize;mCtx.lineCap='round';
+    if(markupTool==='arrow'){
+      mCtx.beginPath();mCtx.moveTo(markupStartX,markupStartY);mCtx.lineTo(p.x,p.y);mCtx.stroke();
+      const a=Math.atan2(p.y-markupStartY,p.x-markupStartX),hl=15+markupSize*2;
+      mCtx.beginPath();mCtx.moveTo(p.x,p.y);mCtx.lineTo(p.x-hl*Math.cos(a-0.4),p.y-hl*Math.sin(a-0.4));
+      mCtx.moveTo(p.x,p.y);mCtx.lineTo(p.x-hl*Math.cos(a+0.4),p.y-hl*Math.sin(a+0.4));mCtx.stroke();
+    }else if(markupTool==='circle'){
+      const rx=Math.abs(p.x-markupStartX)/2,ry=Math.abs(p.y-markupStartY)/2;
+      const cx=markupStartX+(p.x-markupStartX)/2,cy=markupStartY+(p.y-markupStartY)/2;
+      mCtx.beginPath();mCtx.ellipse(cx,cy,Math.max(rx,1),Math.max(ry,1),0,0,Math.PI*2);mCtx.stroke();
+    }else if(markupTool==='rect'){
+      mCtx.beginPath();mCtx.strokeRect(markupStartX,markupStartY,p.x-markupStartX,p.y-markupStartY);
+    }
+  }
+});
+
+markupCanvas.addEventListener('pointerup',()=>{if(markupDrawing){markupDrawing=false;if(markupTool==='draw')mCtx.closePath()}});
+
+$('markupCancel').addEventListener('click',()=>{markupOverlay.style.display='none';markupPhotoId=null});
+
+$('markupDone').addEventListener('click',async()=>{
+  if(!markupPhotoId)return;
+  const newDataUrl=markupCanvas.toDataURL('image/jpeg',0.92);
+  const photo=photos.find(p=>p.id===markupPhotoId);
+  if(photo){photo.dataUrl=newDataUrl;photo.thumb=await makeThumbnail(newDataUrl);await dbPut('photos',photo);await saveReport();updateUI()}
+  markupOverlay.style.display='none';markupPhotoId=null;showToast('✓ Markup saved')
+});
+
+let markupTextX=0,markupTextY=0;
+
+$('markupTextOk').addEventListener('click',()=>{
+  const text=$('markupTextValue').value.trim();
+  if(text){
+    mCtx.font='bold '+Math.max(markupSize*6,18)+'px Arial';
+    mCtx.fillStyle=markupColor;
+    mCtx.fillText(text,markupTextX,markupTextY);
+  }
+  $('markupTextInput').style.display='none';
+});
+
+$('markupTextCancel').addEventListener('click',()=>{
+  $('markupTextInput').style.display='none';
+  if(markupHistory.length>0)mCtx.putImageData(markupHistory.pop(),0,0);
+});
+
+$('markupTextValue').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){e.preventDefault();$('markupTextOk').click()}
+});
+
+loadReports();
 </script>
 </body>
 </html>
